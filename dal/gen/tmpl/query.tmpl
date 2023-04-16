@@ -1,0 +1,263 @@
+func (dao *base{{.pascalCaseObject}}DAO) Find(ctx context.Context, options ...QueryOption) ([]*{{.pascalCaseObject}}Data, error) {
+  option := resoveOption(options)
+  query := fmt.Sprintf("select %s from %s %s %s", dao.allColumns, dao.table, option.order, option.sort)
+  rows, err := dao.db.QueryContext(ctx, query)
+  if err != nil {
+    return nil, err
+  }
+  return scanRows(rows, new{{.pascalCaseObject}}Data)
+}
+
+func (dao *base{{.pascalCaseObject}}DAO) Page(ctx context.Context, pageIndex int, pageSize int, options ...QueryOption) (*{{.pascalCaseObject}}PageData, error) {
+  option := resoveOption(options)
+  var data []*{{.pascalCaseObject}}Data
+  var count int
+
+  err := parallelQuery(
+    func() error {
+      query := fmt.Sprintf("select %s from %s %s %s limit %d, %d", dao.allColumns, dao.table, option.order, option.sort, (pageIndex - 1) * pageSize, pageSize)
+      rows, err := dao.db.QueryContext(ctx, query)
+      if err != nil {
+        return err
+      }
+      data, err = scanRows(rows, new{{.pascalCaseObject}}Data)
+      return err
+    },
+    func() error {
+      var err error
+      count, err = dao.Count(ctx)
+      return err
+    },
+  )
+
+  if err != nil {
+    return nil, err
+  }
+
+  return &{{.pascalCaseObject}}PageData{
+    Data: data,
+    Count: count,
+  }, nil
+}
+
+func (dao *base{{.pascalCaseObject}}DAO) Count(ctx context.Context) (int, error) {
+  query := fmt.Sprintf("select count(0) from %s", dao.table)
+  var count int
+  row := dao.db.QueryRowContext(ctx, query)
+  err := row.Scan(&count)
+  if err != nil {
+    return 0, err
+  }
+  return count, nil
+}
+
+{{range .indexList}}
+{{if .unique}}
+
+func (dao *base{{$.pascalCaseObject}}DAO) GetBy{{.fieldsJoinAnd}}(ctx context.Context, {{.fieldsFormalArgs}}) (*{{$.pascalCaseObject}}Data, error) {
+  query := fmt.Sprintf("select %s from %s where {{.fieldsCondition}} limit 1", dao.allColumns, dao.table {{.fieldsConditionArgs}})
+
+  args := make([]any, 0, {{ .fields | len }})
+  {{- range .fields -}}
+    {{ if .Nullable }}
+    if {{.CamelCaseName}}.Valid {
+      args = append(args, {{.CamelCaseName}})
+    }
+    {{else}}
+    args = append(args, {{.CamelCaseName}})
+    {{end}}
+  {{ end }}
+  row := dao.db.QueryRowContext(ctx, query, args...)
+  data, err := scanRow(row, new{{$.pascalCaseObject}}Data)
+  switch err {
+  case nil:
+    return data, nil
+  case sql.ErrNoRows:
+    return nil, nil
+  default:
+    return nil, err
+  }
+}
+
+func (dao *base{{$.pascalCaseObject}}DAO) ExistBy{{.fieldsJoinAnd}}(ctx context.Context, {{.fieldsFormalArgs}}) (bool, error) {
+  query := fmt.Sprintf("select `{{$.primaryField.Name}}` from %s where {{.fieldsCondition}} limit 1", dao.table {{.fieldsConditionArgs}})
+
+  args := make([]any, 0, {{ .fields | len }})
+  {{- range .fields -}}
+    {{ if .Nullable }}
+    if {{.CamelCaseName}}.Valid {
+      args = append(args, {{.CamelCaseName}})
+    }
+    {{else}}
+    args = append(args, {{.CamelCaseName}})
+    {{end}}
+  {{ end }}
+  row := dao.db.QueryRowContext(ctx, query, args...)
+  var value {{$.primaryField.DataType}}
+  err := row.Scan(&value)
+  switch err {
+  case nil:
+    return true, nil
+  case sql.ErrNoRows:
+    return false, nil
+  default:
+    return false, err
+  }
+}
+
+{{else}}
+
+func (dao *base{{$.pascalCaseObject}}DAO) FindBy{{.fieldsJoinAnd}}(ctx context.Context, {{.fieldsFormalArgs}}, options ...QueryOption) ([]*{{$.pascalCaseObject}}Data, error) {
+  option := resoveOption(options)
+  query := fmt.Sprintf("select %s from %s where {{.fieldsCondition}} %s %s", dao.allColumns, dao.table {{.fieldsConditionArgs}}, option.order, option.sort)
+
+  args := make([]any, 0, {{ .fields | len }})
+  {{- range .fields -}}
+    {{ if .Nullable }}
+    if {{.CamelCaseName}}.Valid {
+      args = append(args, {{.CamelCaseName}})
+    }
+    {{else}}
+    args = append(args, {{.CamelCaseName}})
+    {{end}}
+  {{end}}
+  rows, err := dao.db.QueryContext(ctx, query, args...)
+  if err != nil {
+    return nil, err
+  }
+  return scanRows(rows, new{{$.pascalCaseObject}}Data)
+}
+
+func (dao *base{{$.pascalCaseObject}}DAO) PageBy{{.fieldsJoinAnd}}(ctx context.Context, {{.fieldsFormalArgs}}, pageIndex int, pageSize int, options ...QueryOption) (*{{$.pascalCaseObject}}PageData, error) {
+  option := resoveOption(options)
+  var data []*{{$.pascalCaseObject}}Data
+  var count int
+
+  args := make([]any, 0, {{ .fields | len }})
+  {{- range .fields -}}
+    {{ if .Nullable }}
+    if {{.CamelCaseName}}.Valid {
+      args = append(args, {{.CamelCaseName}})
+    }
+    {{else}}
+    args = append(args, {{.CamelCaseName}})
+    {{end}}
+  {{ end }}
+
+  err := parallelQuery(
+    func() error {
+      query := fmt.Sprintf("select %s from %s where {{.fieldsCondition}} %s %s limit %d, %d", dao.allColumns, dao.table {{.fieldsConditionArgs}}, option.order, option.sort, (pageIndex - 1) * pageSize, pageSize)
+
+      rows, err := dao.db.QueryContext(ctx, query, args...)
+      if err != nil {
+        return err
+      }
+      data, err = scanRows(rows, new{{$.pascalCaseObject}}Data)
+      return err
+    },
+    func() error {
+      query := fmt.Sprintf("select count(0) from (select `{{$.primaryField.Name}}` from %s where {{.fieldsCondition}}) as a", dao.table {{.fieldsConditionArgs}})
+      row := dao.db.QueryRowContext(ctx, query, args...)
+      return row.Scan(&count)
+    },
+  )
+
+  if err != nil {
+    return nil, err
+  }
+
+  return &{{$.pascalCaseObject}}PageData{
+    Data: data,
+    Count: count,
+  }, nil
+}
+
+{{end}}
+
+{{if .fields | len | eq 1}}
+{{$singleField := index .fields 0}}
+func (dao *base{{$.pascalCaseObject}}DAO) FindInBy{{$singleField.PascalCaseName}}(ctx context.Context, {{$singleField.CamelCaseName}}List []{{$singleField.DataType}}, options ...QueryOption) ([]*{{$.pascalCaseObject}}Data, error) {
+  option := resoveOption(options)
+
+  containNull := false
+  args := make([]any, len({{$singleField.CamelCaseName}}List))
+  for i, item := range {{$singleField.CamelCaseName}}List {
+    {{- if $singleField.Nullable -}}
+    if item.Valid {
+      args[i] = {{$singleField.CamelCaseName}}List[i]
+    } else {
+      containNull = true
+    }
+    {{else}}
+    args[i] = item
+    {{- end -}}
+  }
+
+  if len({{$singleField.CamelCaseName}}List) == 0 {
+    return []*{{$.pascalCaseObject}}Data{}, nil
+  }
+
+  query := fmt.Sprintf("select %s from %s where `{{$singleField.Name}}` in (?%s) %s %s %s", dao.allColumns, dao.table, strings.Repeat(",?", len({{$singleField.CamelCaseName}}List)-1), ternary(containNull, "or `{{$singleField.Name}}` is NULL", ""), option.order, option.sort)
+  rows, err := dao.db.QueryContext(ctx, query, args...)
+  if err != nil {
+    return nil, err
+  }
+
+  return scanRows(rows, new{{$.pascalCaseObject}}Data)
+}
+
+func (dao *base{{$.pascalCaseObject}}DAO) PageInBy{{$singleField.PascalCaseName}}(ctx context.Context, {{$singleField.CamelCaseName}}List []{{$singleField.DataType}}, pageIndex int, pageSize int, options ...QueryOption) (*{{$.pascalCaseObject}}PageData, error) {
+  option := resoveOption(options)
+  var data []*{{$.pascalCaseObject}}Data
+  var count int
+  
+  containNull := false
+  args := make([]any, len({{$singleField.CamelCaseName}}List))
+  for i, item := range {{$singleField.CamelCaseName}}List {
+    {{- if $singleField.Nullable -}}
+    if item.Valid {
+      args[i] = {{$singleField.CamelCaseName}}List[i]
+    } else {
+      containNull = true
+    }
+    {{else}}
+    args[i] = item
+    {{- end -}}
+  }
+
+  if len({{$singleField.CamelCaseName}}List) == 0 {
+    return &{{$.pascalCaseObject}}PageData{
+      Data: []*{{$.pascalCaseObject}}Data{},
+      Count: 0,
+    }, nil
+  }
+
+  err := parallelQuery(
+    func() error {
+      query := fmt.Sprintf("select %s from %s where {{$singleField.Name}} in (?%s) %s %s %s limit %d, %d", dao.allColumns, dao.table, strings.Repeat(",?", len({{$singleField.CamelCaseName}}List)-1), ternary(containNull, "or `{{$singleField.Name}}` is NULL", ""), option.order, option.sort, (pageIndex - 1) * pageSize, pageSize)
+      rows, err := dao.db.QueryContext(ctx, query, args...)
+      if err != nil {
+        return err
+      }
+      data, err = scanRows(rows, new{{$.pascalCaseObject}}Data)
+      return err
+    },
+    func() error {
+      query := fmt.Sprintf("select count(0) from (select `{{$singleField.Name}}` from %s where {{$singleField.Name}} in (?%s) %s) as a", dao.table, strings.Repeat(",?", len({{$singleField.CamelCaseName}}List)-1), ternary(containNull, "or `{{$singleField.Name}}` is NULL", ""))
+      row := dao.db.QueryRowContext(ctx, query, args...)
+      return row.Scan(&count)
+    },
+  )
+
+  if err != nil {
+    return nil, err
+  }
+
+  return &{{$.pascalCaseObject}}PageData{
+    Data: data,
+    Count: count,
+  }, nil
+}
+
+{{end}}
+{{end}}

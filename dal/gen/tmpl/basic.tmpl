@@ -1,0 +1,52 @@
+package dao
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"time"
+  "strings"
+  "gopkg.in/guregu/null.v4"
+  "github.com/samber/mo"
+)
+
+type (
+	base{{.pascalCaseObject}}DAO struct {
+		db *sql.DB
+		table string
+    columnNames []string
+    allColumns string
+	}
+
+	{{.pascalCaseObject}}Data struct {
+		{{.fieldsStruct}}
+	}
+
+  {{.pascalCaseObject}}PageData struct {
+		Data []*{{.pascalCaseObject}}Data
+    Count int;
+	}
+
+  {{.pascalCaseObject}}PartialData struct {
+		{{.fieldsPartialStruct}}
+	}
+)
+
+func new{{.pascalCaseObject}}Data() (*{{.pascalCaseObject}}Data, []any) {
+  var d {{.pascalCaseObject}}Data
+  ptrs := []any{
+    {{range .fieldNames}}&d.{{.}},
+    {{end}}
+  }
+  return &d, ptrs
+}
+
+func newBase{{.pascalCaseObject}}DAO(db *sql.DB) *base{{.pascalCaseObject}}DAO {
+  columnNames := []string{ {{.fieldsSlice}} }
+  return &base{{.pascalCaseObject}}DAO {
+    db: db,
+    table: "`{{.tableObject}}`",
+    columnNames: columnNames,
+    allColumns: columnsToRow(columnNames),
+  }
+}

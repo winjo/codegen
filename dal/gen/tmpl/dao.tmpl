@@ -1,0 +1,15 @@
+package dao
+
+import "database/sql"
+
+type (
+  {{.pascalCaseObject}}DAO struct {
+    *base{{.pascalCaseObject}}DAO
+  }
+)
+
+func New{{.pascalCaseObject}}DAO(db *sql.DB) *{{.pascalCaseObject}}DAO {
+  return &{{.pascalCaseObject}}DAO{
+    base{{.pascalCaseObject}}DAO: newBase{{.pascalCaseObject}}DAO(db),
+  }
+}

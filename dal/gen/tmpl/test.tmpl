@@ -1,0 +1,151 @@
+package dao
+
+import (
+  "context"
+  "testing"
+  "time"
+  "gopkg.in/guregu/null.v4"
+  "github.com/stretchr/testify/assert"
+  "github.com/samber/mo"
+)
+
+var {{.camelCaseObject}}TestDataList = []*{{.pascalCaseObject}}Data {
+  {{- range .fieldsData }}
+  {
+    {{.}}
+  },
+  {{- end}}
+}
+var {{.camelCaseObject}}TestNoData = &{{.pascalCaseObject}}Data {
+  {{ .fieldsNoData }}
+}
+
+// 设置为零值，便于比较
+func emptyAutoValue(data *{{.pascalCaseObject}}Data) *{{.pascalCaseObject}}Data {
+  clone := *data
+  clone.{{.primaryField.PascalCaseName}} = 0
+  clone.{{.createField.PascalCaseName}} = time.Time{}
+  clone.{{.modifiedField.PascalCaseName}} = time.Time{}
+  return &clone
+}
+
+func Test{{.pascalCaseObject}}CRUD(t *testing.T) {
+  assert := assert.New(t)
+  ctx := context.Background()
+  // 新建
+  dao := New{{.pascalCaseObject}}DAO(tdb)
+  r0, err := dao.Insert(ctx, {{.camelCaseObject}}TestDataList[0])
+  assert.NoError(err)
+  id0, err := r0.LastInsertId()
+  assert.NoError(err)
+
+  r1, err := dao.Insert(ctx, {{.camelCaseObject}}TestDataList[1])
+  assert.NoError(err)
+  id1, err := r1.LastInsertId()
+  assert.NoError(err)
+
+  pageInData, err := dao.PageInById(ctx, []int64{id0, id1}, 1, 2)
+  assert.NoError(err)
+
+  assert.Equal(pageInData.Count, 2)
+  assert.Equal(len(pageInData.Data), 2)
+  assert.Equal(*{{.camelCaseObject}}TestDataList[0], *emptyAutoValue(pageInData.Data[0]))
+  assert.Equal(*{{.camelCaseObject}}TestDataList[1], *emptyAutoValue(pageInData.Data[1]))
+
+  pageInDataOrderByGmtCreate, err := dao.PageInById(ctx, []int64{id0, id1}, 1, 2, QueryOption{ OrderBy: mo.Some("gmt_create") })
+  assert.NoError(err)
+  assert.Equal(*{{.camelCaseObject}}TestDataList[0], *emptyAutoValue(pageInDataOrderByGmtCreate.Data[0]))
+  assert.Equal(*{{.camelCaseObject}}TestDataList[1], *emptyAutoValue(pageInDataOrderByGmtCreate.Data[1]))
+
+  pageInDataDesc, err := dao.PageInById(ctx, []int64{id0, id1}, 1, 2, QueryOption{ Desc: mo.Some(true) })
+  assert.NoError(err)
+  assert.Equal(*{{.camelCaseObject}}TestDataList[0], *emptyAutoValue(pageInDataDesc.Data[1]))
+  assert.Equal(*{{.camelCaseObject}}TestDataList[1], *emptyAutoValue(pageInDataDesc.Data[0]))
+
+  // 查询
+  findData, err := dao.Find(ctx)
+  assert.NoError(err)
+  assert.Equal(len(findData), 2)
+
+  pageData, err := dao.Page(ctx, 1, 100)
+  assert.NoError(err)
+  assert.Equal(len(pageData.Data), 2)
+
+  count, err := dao.Count(ctx)
+  assert.NoError(err)
+  assert.Equal(count, 2)
+
+  data := pageInData.Data[0]
+  noData := {{.camelCaseObject}}TestNoData
+{{range .indexList}}
+  {{if .unique}}
+    getBy{{.fieldsJoinAnd}}, err := dao.GetBy{{.fieldsJoinAnd}}(ctx, {{.fieldsRealArgs}})
+    assert.NoError(err)
+    assert.NotNil(getBy{{.fieldsJoinAnd}})
+
+    getBy{{.fieldsJoinAnd}}404, err := dao.GetBy{{.fieldsJoinAnd}}(ctx, {{.fieldsRealArgs404}})
+    assert.NoError(err)
+    assert.Nil(getBy{{.fieldsJoinAnd}}404)
+  {{else}}
+    findBy{{.fieldsJoinAnd}}, err := dao.FindBy{{.fieldsJoinAnd}}(ctx, {{.fieldsRealArgs}})
+    assert.NoError(err)
+    assert.GreaterOrEqual(len(findBy{{.fieldsJoinAnd}}), 1)
+
+    findBy{{.fieldsJoinAnd}}404, err := dao.FindBy{{.fieldsJoinAnd}}(ctx, {{.fieldsRealArgs404}})
+    assert.NoError(err)
+    assert.GreaterOrEqual(len(findBy{{.fieldsJoinAnd}}404), 0)
+
+    pageBy{{.fieldsJoinAnd}}, err := dao.PageBy{{.fieldsJoinAnd}}(ctx, {{.fieldsRealArgs}}, 1, 100)
+    assert.NoError(err)
+    assert.GreaterOrEqual(pageBy{{.fieldsJoinAnd}}.Count, 1)
+
+    pageBy{{.fieldsJoinAnd}}404, err := dao.PageBy{{.fieldsJoinAnd}}(ctx, {{.fieldsRealArgs404}}, 1, 100)
+    assert.NoError(err)
+    assert.GreaterOrEqual(pageBy{{.fieldsJoinAnd}}404.Count, 0)
+  {{end}}
+
+  {{if .fields | len | eq 1}}
+  {{$singleField := index .fields 0}}
+    findInBy{{$singleField.PascalCaseName}}, err := dao.FindInBy{{$singleField.PascalCaseName}}(ctx, []{{$singleField.DataType}}{ {{.fieldsRealArgs}} })
+    assert.NoError(err)
+    assert.GreaterOrEqual(len(findInBy{{$singleField.PascalCaseName}}), 1)
+
+    findInBy{{$singleField.PascalCaseName}}404, err := dao.FindInBy{{$singleField.PascalCaseName}}(ctx, []{{$singleField.DataType}}{ {{.fieldsRealArgs404}} })
+    assert.NoError(err)
+    assert.GreaterOrEqual(len(findInBy{{$singleField.PascalCaseName}}404), 0)
+
+    pageInBy{{$singleField.PascalCaseName}}, err := dao.PageInBy{{$singleField.PascalCaseName}}(ctx, []{{$singleField.DataType}}{ {{.fieldsRealArgs}} }, 1, 100)
+    assert.NoError(err)
+    assert.GreaterOrEqual(pageInBy{{$singleField.PascalCaseName}}.Count, 1)
+
+    pageInBy{{$singleField.PascalCaseName}}404, err := dao.PageInBy{{$singleField.PascalCaseName}}(ctx, []{{$singleField.DataType}}{ {{.fieldsRealArgs404}} }, 1, 100)
+    assert.NoError(err)
+    assert.GreaterOrEqual(pageInBy{{$singleField.PascalCaseName}}404.Count, 0)
+  {{end}}
+{{end}}
+
+  // 修改
+  err = dao.UpdatePartial(ctx, id0, &{{.pascalCaseObject}}PartialData{})
+  assert.NoError(err)
+  afterUpdatePartial, err := dao.GetBy{{.primaryField.PascalCaseName}}(ctx, id0)
+  assert.NoError(err)
+  assert.NotNil(afterUpdatePartial)
+  assert.Equal(*sampleTestDataList[0], *emptyAutoValue(afterUpdatePartial))
+
+  err = dao.Delete(ctx, id1)
+  assert.NoError(err)
+  err = dao.Update(ctx, id0, {{.camelCaseObject}}TestDataList[1])
+  assert.NoError(err)
+  afterUpdate, err := dao.GetBy{{.primaryField.PascalCaseName}}(ctx, id0)
+  assert.NoError(err)
+  afterUpdate.{{.primaryField.PascalCaseName}} = 0
+  afterUpdate.{{.createField.PascalCaseName}} = time.Time{}
+  afterUpdate.{{.modifiedField.PascalCaseName}} = time.Time{}
+  assert.Equal(*sampleTestDataList[1], *emptyAutoValue(afterUpdate))
+
+  // 删除
+  err = dao.Delete(ctx, id0)
+  assert.NoError(err)
+  afterDelete, err := dao.GetBy{{.primaryField.PascalCaseName}}(ctx, id1)
+  assert.Nil(afterDelete)
+}

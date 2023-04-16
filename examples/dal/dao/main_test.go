@@ -1,0 +1,62 @@
+package dao
+
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	"log"
+	"os"
+	"strings"
+	"testing"
+)
+
+var tdb *sql.DB
+
+func TestMain(m *testing.M) {
+	host := os.Getenv("MYSQL_HOST")
+	pass := os.Getenv("MYSQL_PASS")
+	user := os.Getenv("MYSQL_USER")
+	port := os.Getenv("MYSQL_PORT")
+
+	if host == "" || pass == "" || user == "" || port == "" {
+		log.Fatal("miss mysql env")
+	}
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%s)/", user, pass, host, port))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dbName := "codegen_test_examples"
+	if _, err := db.Exec("DROP DATABASE IF EXISTS " + dbName); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := db.Exec("CREATE DATABASE " + dbName); err != nil {
+		log.Fatal(err)
+	}
+	ds := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?multiStatements=true&parseTime=true", user, pass, host, port, dbName)
+	tdb, err = sql.Open("mysql", ds)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	structurePath := "../structure"
+	files, err := os.ReadDir(structurePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".sql") {
+			buf, err := os.ReadFile(structurePath + "/" + file.Name())
+			if err != nil {
+				log.Fatal(err)
+			}
+			_, err = tdb.Exec(string(buf))
+			if err != nil {
+				log.Fatalf("%s: %s", file.Name(), err)
+			}
+		}
+	}
+
+	code := m.Run()
+	os.Exit(code)
+}

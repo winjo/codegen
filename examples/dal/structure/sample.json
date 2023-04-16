@@ -1,0 +1,199 @@
+{
+  "db": "codegen_test",
+  "name": "sample",
+  "columns": [
+    {
+      "name": "id",
+      "type": "bigint",
+      "length": null,
+      "unsigned": false,
+      "nullable": false,
+      "default": null,
+      "extra": "auto_increment",
+      "comment": ""
+    },
+    {
+      "name": "gmt_create",
+      "type": "timestamp",
+      "length": null,
+      "unsigned": false,
+      "nullable": false,
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED",
+      "comment": ""
+    },
+    {
+      "name": "gmt_modified",
+      "type": "timestamp",
+      "length": null,
+      "unsigned": false,
+      "nullable": false,
+      "default": "CURRENT_TIMESTAMP",
+      "extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP",
+      "comment": ""
+    },
+    {
+      "name": "r_int",
+      "type": "int",
+      "length": null,
+      "unsigned": false,
+      "nullable": false,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "n_int",
+      "type": "int",
+      "length": null,
+      "unsigned": false,
+      "nullable": true,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "r_float",
+      "type": "float",
+      "length": null,
+      "unsigned": false,
+      "nullable": false,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "n_float",
+      "type": "float",
+      "length": null,
+      "unsigned": false,
+      "nullable": true,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "r_string",
+      "type": "varchar",
+      "length": 10,
+      "unsigned": false,
+      "nullable": false,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "n_string",
+      "type": "varchar",
+      "length": 10,
+      "unsigned": false,
+      "nullable": true,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "r_time",
+      "type": "datetime",
+      "length": null,
+      "unsigned": false,
+      "nullable": false,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "n_time",
+      "type": "datetime",
+      "length": null,
+      "unsigned": false,
+      "nullable": true,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "union1",
+      "type": "varchar",
+      "length": 10,
+      "unsigned": false,
+      "nullable": false,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "union2",
+      "type": "varchar",
+      "length": 10,
+      "unsigned": false,
+      "nullable": false,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    },
+    {
+      "name": "union3",
+      "type": "varchar",
+      "length": 10,
+      "unsigned": false,
+      "nullable": true,
+      "default": null,
+      "extra": "",
+      "comment": ""
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_n_time",
+      "unique": false,
+      "columns": [
+        "n_time"
+      ]
+    },
+    {
+      "name": "idx_r_time",
+      "unique": false,
+      "columns": [
+        "r_time"
+      ]
+    },
+    {
+      "name": "idx_union1_union3",
+      "unique": false,
+      "columns": [
+        "union1",
+        "union3"
+      ]
+    },
+    {
+      "name": "PRIMARY",
+      "unique": true,
+      "columns": [
+        "id"
+      ]
+    },
+    {
+      "name": "uk_n_int",
+      "unique": true,
+      "columns": [
+        "n_int"
+      ]
+    },
+    {
+      "name": "uk_r_int",
+      "unique": true,
+      "columns": [
+        "r_int"
+      ]
+    },
+    {
+      "name": "uk_union_1_union_2",
+      "unique": true,
+      "columns": [
+        "union1",
+        "union2"
+      ]
+    }
+  ]
+}
