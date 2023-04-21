@@ -22,4 +22,4 @@ codegen dal -ds '<user>:<password>@tcp(127.0.0.1:3306)/<db>?charset=utf8mb4'
 - UpdatePartial 更新部分数据
 - Delete 删除数据
 
-具体代码参考 [examples](./examples)
+具体代码参考 [examples](./examples/dal/dao)
