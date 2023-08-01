@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS sample;
 CREATE TABLE sample (
  `id` bigint NOT NULL AUTO_INCREMENT,
- `gmt_create` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ `gmt_create` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
  `gmt_modified` timestamp NOT NULL on update CURRENT_TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
  `r_int` int NOT NULL,
  `n_int` int NULL DEFAULT NULL,

@@ -88,7 +88,7 @@ func (g *generator) genExec() string {
 func getTimeFieldValue(f *Field) string {
 	if f.DataType == "int" { // 秒级时间戳
 		return "UNIX_TIMESTAMP()"
-	} else if f.DataType == "bigint" { // 毫秒级暑假戳
+	} else if f.DataType == "bigint" { // 毫秒级时间戳
 		return "ROUND(UNIX_TIMESTAMP(CURTIME(4) * 1000))"
 	} else { // 等同 CURRENT_TIMESTAMPE
 		length := ""

@@ -22,7 +22,7 @@ func (dao *base{{.pascalCaseObject}}DAO) UpdatePartial(ctx context.Context, {{.p
       {{else if eq .DataType "bigint"}}
         sets = append(sets, "`{{.Name}}` = ROUND(UNIX_TIMESTAMP(CURTIME(4) * 1000))")
       {{else}}
-        sets = append(sets, "`{{.Name}}` = NOW({{if ne .Length nil}}{{.modifiedField.Length}}{{end}})")
+        sets = append(sets, "`{{.Name}}` = NOW({{if ne .Length nil}}{{.Length}}{{end}})")
       {{end}}
     {{else}}
       if v, present := data.{{.PascalCaseName}}.Get(); present {

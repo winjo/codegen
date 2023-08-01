@@ -15,10 +15,10 @@
     {
       "name": "gmt_create",
       "type": "timestamp",
-      "length": null,
+      "length": 3,
       "unsigned": false,
       "nullable": false,
-      "default": "CURRENT_TIMESTAMP",
+      "default": "CURRENT_TIMESTAMP(3)",
       "extra": "DEFAULT_GENERATED",
       "comment": ""
     },

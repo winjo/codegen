@@ -811,7 +811,7 @@ func (dao *baseSampleDAO) ExistByUnion1AndUnion2(ctx context.Context, union1 str
 }
 
 func (dao *baseSampleDAO) Insert(ctx context.Context, data *SampleData) (sql.Result, error) {
-	query := fmt.Sprintf("insert into %s (`gmt_create`,`gmt_modified`,`r_int`,`n_int`,`r_float`,`n_float`,`r_string`,`n_string`,`r_time`,`n_time`,`union1`,`union2`,`union3`) values (NOW(),NOW(),?,?,?,?,?,?,?,?,?,?,?)", dao.table)
+	query := fmt.Sprintf("insert into %s (`gmt_create`,`gmt_modified`,`r_int`,`n_int`,`r_float`,`n_float`,`r_string`,`n_string`,`r_time`,`n_time`,`union1`,`union2`,`union3`) values (NOW(3),NOW(),?,?,?,?,?,?,?,?,?,?,?)", dao.table)
 	result, err := dao.db.ExecContext(ctx, query, data.RInt, data.NInt, data.RFloat, data.NFloat, data.RString, data.NString, data.RTime, data.NTime, data.Union1, data.Union2, data.Union3)
 	return result, err
 }

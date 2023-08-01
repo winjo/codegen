@@ -108,17 +108,16 @@ func wrapName(name string) string {
 }
 
 func getDefault(c *Column) string {
-	if c.Default == nil && c.Nullable {
-		return "NULL"
+	if c.Default == nil {
+		if c.Nullable {
+			return "NULL"
+		}
+		return ""
 	}
 
-	if c.Type == "timestamp" && *c.Default == "CURRENT_TIMESTAMP" {
+	if c.Type == "timestamp" && strings.HasPrefix(*c.Default, "CURRENT_TIMESTAMP") {
 		return *c.Default
 	}
 
-	if c.Default != nil {
-		return fmt.Sprintf("'%s'", *c.Default)
-	}
-
-	return ""
+	return fmt.Sprintf("'%s'", *c.Default)
 }
