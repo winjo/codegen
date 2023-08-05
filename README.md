@@ -2,6 +2,13 @@
 > 代码生成
 
 # 使用
+## 安装
+Go >= 1.18
+
+```bash
+go install github.com/winjo/codegen
+```
+
 ## 数据库 dal 代码生成
 ```bash
 codegen dal -ds '<user>:<password>@tcp(127.0.0.1:3306)/<db>?charset=utf8mb4'
@@ -23,3 +30,9 @@ codegen dal -ds '<user>:<password>@tcp(127.0.0.1:3306)/<db>?charset=utf8mb4'
 - Delete 删除数据
 
 具体代码参考 [examples](./examples/dal/dao)
+
+### 约定
+- 创建时间字段使用 gmt_create
+- 修改时间字段使用 gmt_modified
+- dsn 增加配置 parseTime=true
+- 默认 go-sql-driver/mysql 使用的是 prepare，如果 server 不支持，可使用本地插值的方式，dsn 配置 interpolateParams=true
