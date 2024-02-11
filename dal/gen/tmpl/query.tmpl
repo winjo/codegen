@@ -1,7 +1,7 @@
 func (dao *base{{.pascalCaseObject}}DAO) Find(ctx context.Context, options ...QueryOption) ([]*{{.pascalCaseObject}}Data, error) {
   option := resoveOption(options)
   query := fmt.Sprintf("select %s from %s %s %s", dao.allColumns, dao.table, option.order, option.sort)
-  rows, err := dao.db.QueryContext(ctx, query)
+  rows, err := dao.q.QueryContext(ctx, query)
   if err != nil {
     return nil, err
   }
@@ -16,7 +16,7 @@ func (dao *base{{.pascalCaseObject}}DAO) Page(ctx context.Context, pageIndex int
   err := parallelQuery(
     func() error {
       query := fmt.Sprintf("select %s from %s %s %s limit %d, %d", dao.allColumns, dao.table, option.order, option.sort, (pageIndex - 1) * pageSize, pageSize)
-      rows, err := dao.db.QueryContext(ctx, query)
+      rows, err := dao.q.QueryContext(ctx, query)
       if err != nil {
         return err
       }
@@ -43,7 +43,7 @@ func (dao *base{{.pascalCaseObject}}DAO) Page(ctx context.Context, pageIndex int
 func (dao *base{{.pascalCaseObject}}DAO) Count(ctx context.Context) (int, error) {
   query := fmt.Sprintf("select count(0) from %s", dao.table)
   var count int
-  row := dao.db.QueryRowContext(ctx, query)
+  row := dao.q.QueryRowContext(ctx, query)
   err := row.Scan(&count)
   if err != nil {
     return 0, err
@@ -67,7 +67,7 @@ func (dao *base{{$.pascalCaseObject}}DAO) GetBy{{.fieldsJoinAnd}}(ctx context.Co
     args = append(args, {{.CamelCaseName}})
     {{end}}
   {{ end }}
-  row := dao.db.QueryRowContext(ctx, query, args...)
+  row := dao.q.QueryRowContext(ctx, query, args...)
   data, err := scanRow(row, new{{$.pascalCaseObject}}Data)
   switch err {
   case nil:
@@ -92,7 +92,7 @@ func (dao *base{{$.pascalCaseObject}}DAO) ExistBy{{.fieldsJoinAnd}}(ctx context.
     args = append(args, {{.CamelCaseName}})
     {{end}}
   {{ end }}
-  row := dao.db.QueryRowContext(ctx, query, args...)
+  row := dao.q.QueryRowContext(ctx, query, args...)
   var value {{$.primaryField.DataType}}
   err := row.Scan(&value)
   switch err {
@@ -121,7 +121,7 @@ func (dao *base{{$.pascalCaseObject}}DAO) FindBy{{.fieldsJoinAnd}}(ctx context.C
     args = append(args, {{.CamelCaseName}})
     {{end}}
   {{end}}
-  rows, err := dao.db.QueryContext(ctx, query, args...)
+  rows, err := dao.q.QueryContext(ctx, query, args...)
   if err != nil {
     return nil, err
   }
@@ -148,7 +148,7 @@ func (dao *base{{$.pascalCaseObject}}DAO) PageBy{{.fieldsJoinAnd}}(ctx context.C
     func() error {
       query := fmt.Sprintf("select %s from %s where {{.fieldsCondition}} %s %s limit %d, %d", dao.allColumns, dao.table {{.fieldsConditionArgs}}, option.order, option.sort, (pageIndex - 1) * pageSize, pageSize)
 
-      rows, err := dao.db.QueryContext(ctx, query, args...)
+      rows, err := dao.q.QueryContext(ctx, query, args...)
       if err != nil {
         return err
       }
@@ -157,7 +157,7 @@ func (dao *base{{$.pascalCaseObject}}DAO) PageBy{{.fieldsJoinAnd}}(ctx context.C
     },
     func() error {
       query := fmt.Sprintf("select count(0) from (select `{{$.primaryField.Name}}` from %s where {{.fieldsCondition}}) as a", dao.table {{.fieldsConditionArgs}})
-      row := dao.db.QueryRowContext(ctx, query, args...)
+      row := dao.q.QueryRowContext(ctx, query, args...)
       return row.Scan(&count)
     },
   )
@@ -198,7 +198,7 @@ func (dao *base{{$.pascalCaseObject}}DAO) FindInBy{{$singleField.PascalCaseName}
   }
 
   query := fmt.Sprintf("select %s from %s where `{{$singleField.Name}}` in (?%s) %s %s %s", dao.allColumns, dao.table, strings.Repeat(",?", len({{$singleField.CamelCaseName}}List)-1), ternary(containNull, "or `{{$singleField.Name}}` is NULL", ""), option.order, option.sort)
-  rows, err := dao.db.QueryContext(ctx, query, args...)
+  rows, err := dao.q.QueryContext(ctx, query, args...)
   if err != nil {
     return nil, err
   }
@@ -235,7 +235,7 @@ func (dao *base{{$.pascalCaseObject}}DAO) PageInBy{{$singleField.PascalCaseName}
   err := parallelQuery(
     func() error {
       query := fmt.Sprintf("select %s from %s where {{$singleField.Name}} in (?%s) %s %s %s limit %d, %d", dao.allColumns, dao.table, strings.Repeat(",?", len({{$singleField.CamelCaseName}}List)-1), ternary(containNull, "or `{{$singleField.Name}}` is NULL", ""), option.order, option.sort, (pageIndex - 1) * pageSize, pageSize)
-      rows, err := dao.db.QueryContext(ctx, query, args...)
+      rows, err := dao.q.QueryContext(ctx, query, args...)
       if err != nil {
         return err
       }
@@ -244,7 +244,7 @@ func (dao *base{{$.pascalCaseObject}}DAO) PageInBy{{$singleField.PascalCaseName}
     },
     func() error {
       query := fmt.Sprintf("select count(0) from (select `{{$singleField.Name}}` from %s where {{$singleField.Name}} in (?%s) %s) as a", dao.table, strings.Repeat(",?", len({{$singleField.CamelCaseName}}List)-1), ternary(containNull, "or `{{$singleField.Name}}` is NULL", ""))
-      row := dao.db.QueryRowContext(ctx, query, args...)
+      row := dao.q.QueryRowContext(ctx, query, args...)
       return row.Scan(&count)
     },
   )

@@ -14,7 +14,7 @@ import (
 
 type (
 	baseSampleDAO struct {
-		db          *sql.DB
+		q           Queryer
 		table       string
 		columnNames []string
 		allColumns  string
@@ -78,10 +78,10 @@ func newSampleData() (*SampleData, []any) {
 	return &d, ptrs
 }
 
-func newBaseSampleDAO(db *sql.DB) *baseSampleDAO {
+func newBaseSampleDAO(q Queryer) *baseSampleDAO {
 	columnNames := []string{"id", "gmt_create", "gmt_modified", "r_int", "n_int", "r_float", "n_float", "r_string", "n_string", "r_time", "n_time", "union1", "union2", "union3"}
 	return &baseSampleDAO{
-		db:          db,
+		q:           q,
 		table:       "`sample`",
 		columnNames: columnNames,
 		allColumns:  columnsToRow(columnNames),
@@ -91,7 +91,7 @@ func newBaseSampleDAO(db *sql.DB) *baseSampleDAO {
 func (dao *baseSampleDAO) Find(ctx context.Context, options ...QueryOption) ([]*SampleData, error) {
 	option := resoveOption(options)
 	query := fmt.Sprintf("select %s from %s %s %s", dao.allColumns, dao.table, option.order, option.sort)
-	rows, err := dao.db.QueryContext(ctx, query)
+	rows, err := dao.q.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (dao *baseSampleDAO) Page(ctx context.Context, pageIndex int, pageSize int,
 	err := parallelQuery(
 		func() error {
 			query := fmt.Sprintf("select %s from %s %s %s limit %d, %d", dao.allColumns, dao.table, option.order, option.sort, (pageIndex-1)*pageSize, pageSize)
-			rows, err := dao.db.QueryContext(ctx, query)
+			rows, err := dao.q.QueryContext(ctx, query)
 			if err != nil {
 				return err
 			}
@@ -133,7 +133,7 @@ func (dao *baseSampleDAO) Page(ctx context.Context, pageIndex int, pageSize int,
 func (dao *baseSampleDAO) Count(ctx context.Context) (int, error) {
 	query := fmt.Sprintf("select count(0) from %s", dao.table)
 	var count int
-	row := dao.db.QueryRowContext(ctx, query)
+	row := dao.q.QueryRowContext(ctx, query)
 	err := row.Scan(&count)
 	if err != nil {
 		return 0, err
@@ -150,7 +150,7 @@ func (dao *baseSampleDAO) FindByNTime(ctx context.Context, nTime null.Time, opti
 		args = append(args, nTime)
 	}
 
-	rows, err := dao.db.QueryContext(ctx, query, args...)
+	rows, err := dao.q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (dao *baseSampleDAO) PageByNTime(ctx context.Context, nTime null.Time, page
 		func() error {
 			query := fmt.Sprintf("select %s from %s where `n_time` %s %s %s limit %d, %d", dao.allColumns, dao.table, ternary(nTime.Valid, "= ?", "is NULL"), option.order, option.sort, (pageIndex-1)*pageSize, pageSize)
 
-			rows, err := dao.db.QueryContext(ctx, query, args...)
+			rows, err := dao.q.QueryContext(ctx, query, args...)
 			if err != nil {
 				return err
 			}
@@ -180,7 +180,7 @@ func (dao *baseSampleDAO) PageByNTime(ctx context.Context, nTime null.Time, page
 		},
 		func() error {
 			query := fmt.Sprintf("select count(0) from (select `id` from %s where `n_time` %s) as a", dao.table, ternary(nTime.Valid, "= ?", "is NULL"))
-			row := dao.db.QueryRowContext(ctx, query, args...)
+			row := dao.q.QueryRowContext(ctx, query, args...)
 			return row.Scan(&count)
 		},
 	)
@@ -213,7 +213,7 @@ func (dao *baseSampleDAO) FindInByNTime(ctx context.Context, nTimeList []null.Ti
 	}
 
 	query := fmt.Sprintf("select %s from %s where `n_time` in (?%s) %s %s %s", dao.allColumns, dao.table, strings.Repeat(",?", len(nTimeList)-1), ternary(containNull, "or `n_time` is NULL", ""), option.order, option.sort)
-	rows, err := dao.db.QueryContext(ctx, query, args...)
+	rows, err := dao.q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,7 @@ func (dao *baseSampleDAO) PageInByNTime(ctx context.Context, nTimeList []null.Ti
 	err := parallelQuery(
 		func() error {
 			query := fmt.Sprintf("select %s from %s where n_time in (?%s) %s %s %s limit %d, %d", dao.allColumns, dao.table, strings.Repeat(",?", len(nTimeList)-1), ternary(containNull, "or `n_time` is NULL", ""), option.order, option.sort, (pageIndex-1)*pageSize, pageSize)
-			rows, err := dao.db.QueryContext(ctx, query, args...)
+			rows, err := dao.q.QueryContext(ctx, query, args...)
 			if err != nil {
 				return err
 			}
@@ -255,7 +255,7 @@ func (dao *baseSampleDAO) PageInByNTime(ctx context.Context, nTimeList []null.Ti
 		},
 		func() error {
 			query := fmt.Sprintf("select count(0) from (select `n_time` from %s where n_time in (?%s) %s) as a", dao.table, strings.Repeat(",?", len(nTimeList)-1), ternary(containNull, "or `n_time` is NULL", ""))
-			row := dao.db.QueryRowContext(ctx, query, args...)
+			row := dao.q.QueryRowContext(ctx, query, args...)
 			return row.Scan(&count)
 		},
 	)
@@ -277,7 +277,7 @@ func (dao *baseSampleDAO) FindByRTime(ctx context.Context, rTime time.Time, opti
 	args := make([]any, 0, 1)
 	args = append(args, rTime)
 
-	rows, err := dao.db.QueryContext(ctx, query, args...)
+	rows, err := dao.q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (dao *baseSampleDAO) PageByRTime(ctx context.Context, rTime time.Time, page
 		func() error {
 			query := fmt.Sprintf("select %s from %s where `r_time` = ? %s %s limit %d, %d", dao.allColumns, dao.table, option.order, option.sort, (pageIndex-1)*pageSize, pageSize)
 
-			rows, err := dao.db.QueryContext(ctx, query, args...)
+			rows, err := dao.q.QueryContext(ctx, query, args...)
 			if err != nil {
 				return err
 			}
@@ -305,7 +305,7 @@ func (dao *baseSampleDAO) PageByRTime(ctx context.Context, rTime time.Time, page
 		},
 		func() error {
 			query := fmt.Sprintf("select count(0) from (select `id` from %s where `r_time` = ?) as a", dao.table)
-			row := dao.db.QueryRowContext(ctx, query, args...)
+			row := dao.q.QueryRowContext(ctx, query, args...)
 			return row.Scan(&count)
 		},
 	)
@@ -334,7 +334,7 @@ func (dao *baseSampleDAO) FindInByRTime(ctx context.Context, rTimeList []time.Ti
 	}
 
 	query := fmt.Sprintf("select %s from %s where `r_time` in (?%s) %s %s %s", dao.allColumns, dao.table, strings.Repeat(",?", len(rTimeList)-1), ternary(containNull, "or `r_time` is NULL", ""), option.order, option.sort)
-	rows, err := dao.db.QueryContext(ctx, query, args...)
+	rows, err := dao.q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +363,7 @@ func (dao *baseSampleDAO) PageInByRTime(ctx context.Context, rTimeList []time.Ti
 	err := parallelQuery(
 		func() error {
 			query := fmt.Sprintf("select %s from %s where r_time in (?%s) %s %s %s limit %d, %d", dao.allColumns, dao.table, strings.Repeat(",?", len(rTimeList)-1), ternary(containNull, "or `r_time` is NULL", ""), option.order, option.sort, (pageIndex-1)*pageSize, pageSize)
-			rows, err := dao.db.QueryContext(ctx, query, args...)
+			rows, err := dao.q.QueryContext(ctx, query, args...)
 			if err != nil {
 				return err
 			}
@@ -372,7 +372,7 @@ func (dao *baseSampleDAO) PageInByRTime(ctx context.Context, rTimeList []time.Ti
 		},
 		func() error {
 			query := fmt.Sprintf("select count(0) from (select `r_time` from %s where r_time in (?%s) %s) as a", dao.table, strings.Repeat(",?", len(rTimeList)-1), ternary(containNull, "or `r_time` is NULL", ""))
-			row := dao.db.QueryRowContext(ctx, query, args...)
+			row := dao.q.QueryRowContext(ctx, query, args...)
 			return row.Scan(&count)
 		},
 	)
@@ -398,7 +398,7 @@ func (dao *baseSampleDAO) FindByUnion1AndUnion3(ctx context.Context, union1 stri
 		args = append(args, union3)
 	}
 
-	rows, err := dao.db.QueryContext(ctx, query, args...)
+	rows, err := dao.q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +421,7 @@ func (dao *baseSampleDAO) PageByUnion1AndUnion3(ctx context.Context, union1 stri
 		func() error {
 			query := fmt.Sprintf("select %s from %s where `union1` = ? and `union3` %s %s %s limit %d, %d", dao.allColumns, dao.table, ternary(union3.Valid, "= ?", "is NULL"), option.order, option.sort, (pageIndex-1)*pageSize, pageSize)
 
-			rows, err := dao.db.QueryContext(ctx, query, args...)
+			rows, err := dao.q.QueryContext(ctx, query, args...)
 			if err != nil {
 				return err
 			}
@@ -430,7 +430,7 @@ func (dao *baseSampleDAO) PageByUnion1AndUnion3(ctx context.Context, union1 stri
 		},
 		func() error {
 			query := fmt.Sprintf("select count(0) from (select `id` from %s where `union1` = ? and `union3` %s) as a", dao.table, ternary(union3.Valid, "= ?", "is NULL"))
-			row := dao.db.QueryRowContext(ctx, query, args...)
+			row := dao.q.QueryRowContext(ctx, query, args...)
 			return row.Scan(&count)
 		},
 	)
@@ -451,7 +451,7 @@ func (dao *baseSampleDAO) GetById(ctx context.Context, id int64) (*SampleData, e
 	args := make([]any, 0, 1)
 	args = append(args, id)
 
-	row := dao.db.QueryRowContext(ctx, query, args...)
+	row := dao.q.QueryRowContext(ctx, query, args...)
 	data, err := scanRow(row, newSampleData)
 	switch err {
 	case nil:
@@ -469,7 +469,7 @@ func (dao *baseSampleDAO) ExistById(ctx context.Context, id int64) (bool, error)
 	args := make([]any, 0, 1)
 	args = append(args, id)
 
-	row := dao.db.QueryRowContext(ctx, query, args...)
+	row := dao.q.QueryRowContext(ctx, query, args...)
 	var value int64
 	err := row.Scan(&value)
 	switch err {
@@ -496,7 +496,7 @@ func (dao *baseSampleDAO) FindInById(ctx context.Context, idList []int64, option
 	}
 
 	query := fmt.Sprintf("select %s from %s where `id` in (?%s) %s %s %s", dao.allColumns, dao.table, strings.Repeat(",?", len(idList)-1), ternary(containNull, "or `id` is NULL", ""), option.order, option.sort)
-	rows, err := dao.db.QueryContext(ctx, query, args...)
+	rows, err := dao.q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +525,7 @@ func (dao *baseSampleDAO) PageInById(ctx context.Context, idList []int64, pageIn
 	err := parallelQuery(
 		func() error {
 			query := fmt.Sprintf("select %s from %s where id in (?%s) %s %s %s limit %d, %d", dao.allColumns, dao.table, strings.Repeat(",?", len(idList)-1), ternary(containNull, "or `id` is NULL", ""), option.order, option.sort, (pageIndex-1)*pageSize, pageSize)
-			rows, err := dao.db.QueryContext(ctx, query, args...)
+			rows, err := dao.q.QueryContext(ctx, query, args...)
 			if err != nil {
 				return err
 			}
@@ -534,7 +534,7 @@ func (dao *baseSampleDAO) PageInById(ctx context.Context, idList []int64, pageIn
 		},
 		func() error {
 			query := fmt.Sprintf("select count(0) from (select `id` from %s where id in (?%s) %s) as a", dao.table, strings.Repeat(",?", len(idList)-1), ternary(containNull, "or `id` is NULL", ""))
-			row := dao.db.QueryRowContext(ctx, query, args...)
+			row := dao.q.QueryRowContext(ctx, query, args...)
 			return row.Scan(&count)
 		},
 	)
@@ -557,7 +557,7 @@ func (dao *baseSampleDAO) GetByNInt(ctx context.Context, nInt null.Int) (*Sample
 		args = append(args, nInt)
 	}
 
-	row := dao.db.QueryRowContext(ctx, query, args...)
+	row := dao.q.QueryRowContext(ctx, query, args...)
 	data, err := scanRow(row, newSampleData)
 	switch err {
 	case nil:
@@ -577,7 +577,7 @@ func (dao *baseSampleDAO) ExistByNInt(ctx context.Context, nInt null.Int) (bool,
 		args = append(args, nInt)
 	}
 
-	row := dao.db.QueryRowContext(ctx, query, args...)
+	row := dao.q.QueryRowContext(ctx, query, args...)
 	var value int64
 	err := row.Scan(&value)
 	switch err {
@@ -608,7 +608,7 @@ func (dao *baseSampleDAO) FindInByNInt(ctx context.Context, nIntList []null.Int,
 	}
 
 	query := fmt.Sprintf("select %s from %s where `n_int` in (?%s) %s %s %s", dao.allColumns, dao.table, strings.Repeat(",?", len(nIntList)-1), ternary(containNull, "or `n_int` is NULL", ""), option.order, option.sort)
-	rows, err := dao.db.QueryContext(ctx, query, args...)
+	rows, err := dao.q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -641,7 +641,7 @@ func (dao *baseSampleDAO) PageInByNInt(ctx context.Context, nIntList []null.Int,
 	err := parallelQuery(
 		func() error {
 			query := fmt.Sprintf("select %s from %s where n_int in (?%s) %s %s %s limit %d, %d", dao.allColumns, dao.table, strings.Repeat(",?", len(nIntList)-1), ternary(containNull, "or `n_int` is NULL", ""), option.order, option.sort, (pageIndex-1)*pageSize, pageSize)
-			rows, err := dao.db.QueryContext(ctx, query, args...)
+			rows, err := dao.q.QueryContext(ctx, query, args...)
 			if err != nil {
 				return err
 			}
@@ -650,7 +650,7 @@ func (dao *baseSampleDAO) PageInByNInt(ctx context.Context, nIntList []null.Int,
 		},
 		func() error {
 			query := fmt.Sprintf("select count(0) from (select `n_int` from %s where n_int in (?%s) %s) as a", dao.table, strings.Repeat(",?", len(nIntList)-1), ternary(containNull, "or `n_int` is NULL", ""))
-			row := dao.db.QueryRowContext(ctx, query, args...)
+			row := dao.q.QueryRowContext(ctx, query, args...)
 			return row.Scan(&count)
 		},
 	)
@@ -671,7 +671,7 @@ func (dao *baseSampleDAO) GetByRInt(ctx context.Context, rInt int64) (*SampleDat
 	args := make([]any, 0, 1)
 	args = append(args, rInt)
 
-	row := dao.db.QueryRowContext(ctx, query, args...)
+	row := dao.q.QueryRowContext(ctx, query, args...)
 	data, err := scanRow(row, newSampleData)
 	switch err {
 	case nil:
@@ -689,7 +689,7 @@ func (dao *baseSampleDAO) ExistByRInt(ctx context.Context, rInt int64) (bool, er
 	args := make([]any, 0, 1)
 	args = append(args, rInt)
 
-	row := dao.db.QueryRowContext(ctx, query, args...)
+	row := dao.q.QueryRowContext(ctx, query, args...)
 	var value int64
 	err := row.Scan(&value)
 	switch err {
@@ -716,7 +716,7 @@ func (dao *baseSampleDAO) FindInByRInt(ctx context.Context, rIntList []int64, op
 	}
 
 	query := fmt.Sprintf("select %s from %s where `r_int` in (?%s) %s %s %s", dao.allColumns, dao.table, strings.Repeat(",?", len(rIntList)-1), ternary(containNull, "or `r_int` is NULL", ""), option.order, option.sort)
-	rows, err := dao.db.QueryContext(ctx, query, args...)
+	rows, err := dao.q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -745,7 +745,7 @@ func (dao *baseSampleDAO) PageInByRInt(ctx context.Context, rIntList []int64, pa
 	err := parallelQuery(
 		func() error {
 			query := fmt.Sprintf("select %s from %s where r_int in (?%s) %s %s %s limit %d, %d", dao.allColumns, dao.table, strings.Repeat(",?", len(rIntList)-1), ternary(containNull, "or `r_int` is NULL", ""), option.order, option.sort, (pageIndex-1)*pageSize, pageSize)
-			rows, err := dao.db.QueryContext(ctx, query, args...)
+			rows, err := dao.q.QueryContext(ctx, query, args...)
 			if err != nil {
 				return err
 			}
@@ -754,7 +754,7 @@ func (dao *baseSampleDAO) PageInByRInt(ctx context.Context, rIntList []int64, pa
 		},
 		func() error {
 			query := fmt.Sprintf("select count(0) from (select `r_int` from %s where r_int in (?%s) %s) as a", dao.table, strings.Repeat(",?", len(rIntList)-1), ternary(containNull, "or `r_int` is NULL", ""))
-			row := dao.db.QueryRowContext(ctx, query, args...)
+			row := dao.q.QueryRowContext(ctx, query, args...)
 			return row.Scan(&count)
 		},
 	)
@@ -777,7 +777,7 @@ func (dao *baseSampleDAO) GetByUnion1AndUnion2(ctx context.Context, union1 strin
 
 	args = append(args, union2)
 
-	row := dao.db.QueryRowContext(ctx, query, args...)
+	row := dao.q.QueryRowContext(ctx, query, args...)
 	data, err := scanRow(row, newSampleData)
 	switch err {
 	case nil:
@@ -797,7 +797,7 @@ func (dao *baseSampleDAO) ExistByUnion1AndUnion2(ctx context.Context, union1 str
 
 	args = append(args, union2)
 
-	row := dao.db.QueryRowContext(ctx, query, args...)
+	row := dao.q.QueryRowContext(ctx, query, args...)
 	var value int64
 	err := row.Scan(&value)
 	switch err {
@@ -812,13 +812,13 @@ func (dao *baseSampleDAO) ExistByUnion1AndUnion2(ctx context.Context, union1 str
 
 func (dao *baseSampleDAO) Insert(ctx context.Context, data *SampleData) (sql.Result, error) {
 	query := fmt.Sprintf("insert into %s (`gmt_create`,`gmt_modified`,`r_int`,`n_int`,`r_float`,`n_float`,`r_string`,`n_string`,`r_time`,`n_time`,`union1`,`union2`,`union3`) values (NOW(3),NOW(),?,?,?,?,?,?,?,?,?,?,?)", dao.table)
-	result, err := dao.db.ExecContext(ctx, query, data.RInt, data.NInt, data.RFloat, data.NFloat, data.RString, data.NString, data.RTime, data.NTime, data.Union1, data.Union2, data.Union3)
+	result, err := dao.q.ExecContext(ctx, query, data.RInt, data.NInt, data.RFloat, data.NFloat, data.RString, data.NString, data.RTime, data.NTime, data.Union1, data.Union2, data.Union3)
 	return result, err
 }
 
 func (dao *baseSampleDAO) Update(ctx context.Context, id int64, data *SampleData) error {
 	query := fmt.Sprintf("update %s set `gmt_modified` = NOW(),`r_int` = ?,`n_int` = ?,`r_float` = ?,`n_float` = ?,`r_string` = ?,`n_string` = ?,`r_time` = ?,`n_time` = ?,`union1` = ?,`union2` = ?,`union3` = ? where `id` = ?", dao.table)
-	_, err := dao.db.ExecContext(ctx, query, data.RInt, data.NInt, data.RFloat, data.NFloat, data.RString, data.NString, data.RTime, data.NTime, data.Union1, data.Union2, data.Union3, id)
+	_, err := dao.q.ExecContext(ctx, query, data.RInt, data.NInt, data.RFloat, data.NFloat, data.RString, data.NString, data.RTime, data.NTime, data.Union1, data.Union2, data.Union3, id)
 	return err
 }
 
@@ -886,12 +886,12 @@ func (dao *baseSampleDAO) UpdatePartial(ctx context.Context, id int64, data *Sam
 	args = append(args, id)
 
 	query := fmt.Sprintf("update %s set %s where `id` = ?", dao.table, strings.Join(sets, ","))
-	_, err := dao.db.ExecContext(ctx, query, args...)
+	_, err := dao.q.ExecContext(ctx, query, args...)
 	return err
 }
 
 func (dao *baseSampleDAO) Delete(ctx context.Context, id int64) error {
 	query := fmt.Sprintf("delete from %s where `id` = ?", dao.table)
-	_, err := dao.db.ExecContext(ctx, query, id)
+	_, err := dao.q.ExecContext(ctx, query, id)
 	return err
 }

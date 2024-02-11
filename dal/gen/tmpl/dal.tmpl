@@ -1,17 +1,15 @@
 package dao
 
-import "database/sql"
-
 type DAL struct {
   {{range .pascalCaseObjectList -}}
   {{.}} *{{.}}DAO
   {{ end }}
 }
 
-func NewDAL(db *sql.DB) *DAL {
+func NewDAL(q Queryer) *DAL {
 	return &DAL{
     {{range .pascalCaseObjectList -}}
-    {{.}}: New{{.}}DAO(db),
+    {{.}}: New{{.}}DAO(q),
     {{ end }}
 	}
 }

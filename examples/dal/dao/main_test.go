@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 	if _, err := db.Exec("CREATE DATABASE " + dbName); err != nil {
 		log.Fatal(err)
 	}
-	ds := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?multiStatements=true&parseTime=true", user, pass, host, port, dbName)
+	ds := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?multiStatements=true&parseTime=true&interpolateParams=true", user, pass, host, port, dbName)
 	tdb, err = sql.Open("mysql", ds)
 	if err != nil {
 		log.Fatal(err)

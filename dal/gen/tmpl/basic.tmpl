@@ -12,7 +12,7 @@ import (
 
 type (
 	base{{.pascalCaseObject}}DAO struct {
-		db *sql.DB
+		q Queryer
 		table string
     columnNames []string
     allColumns string
@@ -41,10 +41,10 @@ func new{{.pascalCaseObject}}Data() (*{{.pascalCaseObject}}Data, []any) {
   return &d, ptrs
 }
 
-func newBase{{.pascalCaseObject}}DAO(db *sql.DB) *base{{.pascalCaseObject}}DAO {
+func newBase{{.pascalCaseObject}}DAO(q Queryer) *base{{.pascalCaseObject}}DAO {
   columnNames := []string{ {{.fieldsSlice}} }
   return &base{{.pascalCaseObject}}DAO {
-    db: db,
+    q: q,
     table: "`{{.tableObject}}`",
     columnNames: columnNames,
     allColumns: columnsToRow(columnNames),

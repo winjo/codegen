@@ -3,11 +3,18 @@
 package dao
 
 import (
+	"context"
 	"database/sql"
 	"github.com/samber/mo"
 	"strings"
 	"sync/atomic"
 )
+
+type Queryer interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
 
 type QueryOption struct {
 	OrderBy mo.Option[string]

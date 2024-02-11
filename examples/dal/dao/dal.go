@@ -2,14 +2,12 @@
 
 package dao
 
-import "database/sql"
-
 type DAL struct {
 	Sample *SampleDAO
 }
 
-func NewDAL(db *sql.DB) *DAL {
+func NewDAL(q Queryer) *DAL {
 	return &DAL{
-		Sample: NewSampleDAO(db),
+		Sample: NewSampleDAO(q),
 	}
 }

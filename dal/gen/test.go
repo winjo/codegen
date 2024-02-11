@@ -35,7 +35,7 @@ func (g *generator) genTest() string {
 		"primaryField":     g.PrimaryField,
 		"createField":      createField,
 		"modifiedField":    modifiedField,
-		"fieldsData": lo.Map([]int{0, 1}, func(i int, index int) string {
+		"fieldsData": lo.Map([]int{0, 1, 2, 3}, func(i int, index int) string {
 			return strings.Join(filterString(lo.Map(g.Fields, func(f *Field, index int) string {
 				if lo.Contains([]string{g.PrimaryField.Name, CreateField, ModifiedField}, f.Name) {
 					return ""

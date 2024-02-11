@@ -1,15 +1,13 @@
 package dao
 
-import "database/sql"
-
 type (
 	SampleDAO struct {
 		*baseSampleDAO
 	}
 )
 
-func NewSampleDAO(db *sql.DB) *SampleDAO {
+func NewSampleDAO(q Queryer) *SampleDAO {
 	return &SampleDAO{
-		baseSampleDAO: newBaseSampleDAO(db),
+		baseSampleDAO: newBaseSampleDAO(q),
 	}
 }

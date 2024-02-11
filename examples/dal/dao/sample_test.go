@@ -38,6 +38,32 @@ var sampleTestDataList = []*SampleData{
 		Union2:  "u1",
 		Union3:  null.String{},
 	},
+	{
+		RInt:    2,
+		NInt:    null.Int{},
+		RFloat:  2,
+		NFloat:  null.Float{},
+		RString: "r2",
+		NString: null.String{},
+		RTime:   time.Unix(time.Now().Unix()+int64(2), 0).UTC(),
+		NTime:   null.Time{},
+		Union1:  "u2",
+		Union2:  "u2",
+		Union3:  null.String{},
+	},
+	{
+		RInt:    3,
+		NInt:    null.Int{},
+		RFloat:  3,
+		NFloat:  null.Float{},
+		RString: "r3",
+		NString: null.String{},
+		RTime:   time.Unix(time.Now().Unix()+int64(3), 0).UTC(),
+		NTime:   null.Time{},
+		Union1:  "u3",
+		Union2:  "u3",
+		Union3:  null.String{},
+	},
 }
 var sampleTestNoData = &SampleData{
 	RInt:    404,
@@ -294,5 +320,68 @@ func TestSampleCRUD(t *testing.T) {
 	err = dao.Delete(ctx, id0)
 	assert.NoError(err)
 	afterDelete, err := dao.GetById(ctx, id1)
+	assert.NoError(err)
 	assert.Nil(afterDelete)
+}
+
+func TestSampleConn(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+	conn, err := tdb.Conn(ctx)
+	assert.NoError(err)
+	defer conn.Close()
+
+	dao := NewSampleDAO(conn)
+
+	r2, err := dao.Insert(ctx, sampleTestDataList[2])
+	assert.NoError(err)
+	id2, err := r2.LastInsertId()
+	assert.NoError(err)
+
+	getById0, err := dao.GetById(ctx, id2)
+	assert.NoError(err)
+	assert.Equal(getById0.Id, id2)
+
+	pageInData, err := dao.PageInById(ctx, []int64{id2}, 1, 1)
+	assert.NoError(err)
+	assert.Equal(pageInData.Count, 1)
+	assert.Equal(len(pageInData.Data), 1)
+	assert.Equal(*sampleTestDataList[2], *emptyAutoValue(pageInData.Data[0]))
+}
+
+func TestSampleTx(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+	tx, err := tdb.BeginTx(context.Background(), nil)
+	assert.NoError(err)
+
+	sampleTx := NewSampleDAO(tx)
+	sampleDao := NewSampleDAO(tdb)
+
+	r3, err := sampleTx.Insert(ctx, sampleTestDataList[3])
+	if err != nil {
+		tx.Rollback()
+		return
+	}
+	tx.Commit()
+	id3, err := r3.LastInsertId()
+	assert.NoError(err)
+	data, err := sampleDao.GetByRInt(ctx, sampleTestDataList[3].RInt)
+	assert.NoError(err)
+	assert.NotNil(data)
+
+	err = sampleDao.Delete(ctx, id3)
+	assert.NoError(err)
+	r3, err = sampleTx.Insert(ctx, sampleTestDataList[3])
+	if err != nil {
+		tx.Rollback()
+		return
+	}
+
+	tx.Rollback()
+	id3, err = r3.LastInsertId()
+	assert.NoError(err)
+	data, err = sampleDao.GetByRInt(ctx, sampleTestDataList[3].RInt)
+	assert.NoError(err)
+	assert.Nil(data)
 }

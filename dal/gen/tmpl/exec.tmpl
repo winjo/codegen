@@ -1,12 +1,12 @@
 func (dao *base{{.pascalCaseObject}}DAO) Insert(ctx context.Context, data *{{.pascalCaseObject}}Data) (sql.Result, error) {
   query := fmt.Sprintf("insert into %s ({{.insertColumns}}) values ({{.insertValues}})", dao.table)
-  result, err := dao.db.ExecContext(ctx, query, {{.insertArgs}})
+  result, err := dao.q.ExecContext(ctx, query, {{.insertArgs}})
   return result, err
 }
 
 func (dao *base{{.pascalCaseObject}}DAO) Update(ctx context.Context, {{.primaryField.CamelCaseName}} {{.primaryField.DataType}}, data *{{.pascalCaseObject}}Data) error {
   query := fmt.Sprintf("update %s set {{.updateSets}} where `{{.primaryField.Name}}` = ?", dao.table)
-  _, err := dao.db.ExecContext(ctx, query, {{.updateArgs}}, {{.primaryField.CamelCaseName}})
+  _, err := dao.q.ExecContext(ctx, query, {{.updateArgs}}, {{.primaryField.CamelCaseName}})
   return err
 }
 
@@ -35,12 +35,12 @@ func (dao *base{{.pascalCaseObject}}DAO) UpdatePartial(ctx context.Context, {{.p
   args = append(args, {{.primaryField.CamelCaseName}})
 
   query := fmt.Sprintf("update %s set %s where `{{.primaryField.Name}}` = ?", dao.table, strings.Join(sets, ","))
-  _, err := dao.db.ExecContext(ctx, query, args...)
+  _, err := dao.q.ExecContext(ctx, query, args...)
   return err
 }
 
 func (dao *base{{.pascalCaseObject}}DAO) Delete(ctx context.Context, {{.primaryField.Name}} {{.primaryField.DataType}}) error {
   query := fmt.Sprintf("delete from %s where `{{.primaryField.Name}}` = ?", dao.table)
-  _, err := dao.db.ExecContext(ctx, query, {{.primaryField.Name}})
+  _, err := dao.q.ExecContext(ctx, query, {{.primaryField.Name}})
   return err
 }
